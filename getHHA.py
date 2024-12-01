@@ -4,8 +4,8 @@ import cv2
 import os
 import math
 
-from utils.rgbd_util import *
-from utils.getCameraParam import *
+from src.depth2hha.utils.rgbd_util import *
+from src.depth2hha.utils.getCameraParam import *
 
 '''
 must use 'COLOR_BGR2GRAY' here, or you will get a different gray-value with what MATLAB gets.
@@ -23,7 +23,7 @@ RD: Raw depth image, the unit of each element in it is "meter"
 '''
 def getHHA(C, D, RD):
     missingMask = (RD == 0);
-    pc, N, yDir, h, pcRot, NRot = processDepthImage(D * 100, missingMask, C);
+    pc, N, yDir, h, pcRot, NRot = processDepthImage(D * 100.0, missingMask, C);
 
     tmp = np.multiply(N, yDir)
     acosValue = np.minimum(1,np.maximum(-1,np.sum(tmp, axis=2)))
@@ -48,15 +48,21 @@ def getHHA(C, D, RD):
 
     # print(np.isnan(angle))
 
-    '''
-    np.uint8 seems to use 'floor', but in matlab, it seems to use 'round'.
-    So I convert it to integer myself.
-    '''
-    I = np.rint(I)
+    # '''
+    # np.uint8 seems to use 'floor', but in matlab, it seems to use 'round'.
+    # So I convert it to integer myself.
+    # '''
+    # I = np.rint(I)
 
-    # np.uint8: 256->1, but in MATLAB, uint8: 256->255
-    I[I>255] = 255
-    HHA = I.astype(np.uint8)
+    # # np.uint8: 256->1, but in MATLAB, uint8: 256->255
+    # I[I>255] = 255
+    # HHA = I.astype(np.uint8)
+    
+    # NOTE: in this case we will use uin16 to represent the image
+    I = np.rint(I)
+    I[I>65535] = 65535
+    HHA = I.astype(np.uint16)
+
     return HHA
 
 if __name__ == "__main__":

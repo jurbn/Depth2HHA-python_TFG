@@ -1,6 +1,6 @@
 # --*-- coding:utf-8 --*--
 import numpy as np
-from utils.util import *
+from src.depth2hha.utils.util import *
 np.seterr(divide='ignore', invalid='ignore')
 
 '''
@@ -28,9 +28,9 @@ def processDepthImage(z, missingMask, C):
     pc[:,:,1] = Y
     pc[:,:,2] = Z
 
-    N1, b1 = computeNormalsSquareSupport(z/100, missingMask, normalParam_patchSize[0],
+    N1, b1 = computeNormalsSquareSupport(z/100.0, missingMask, normalParam_patchSize[0],
     1, C, np.ones(z.shape))
-    N2, b2 = computeNormalsSquareSupport(z/100, missingMask, normalParam_patchSize[1],
+    N2, b2 = computeNormalsSquareSupport(z/100.0, missingMask, normalParam_patchSize[1],
     1, C, np.ones(z.shape))
 
     N = N1
@@ -84,7 +84,7 @@ Input:
                     not be straddled
 '''
 def computeNormalsSquareSupport(depthImage, missingMask, R, sc, cameraMatrix, superpixels):
-    depthImage = depthImage*100     # convert to centi metres
+    depthImage = depthImage*100.0     # convert to centi metres
     X, Y, Z = getPointCloudFromZ(depthImage, cameraMatrix, sc)
     Xf = X
     Yf = Y
