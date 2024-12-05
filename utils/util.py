@@ -137,26 +137,37 @@ Input: yi is an axis 3x1 vector
 
 '''
 def getRMatrix(yi, yf):
-    if (np.isscalar(yf)):
-        ax = yi / np.linalg.norm(yi)        # norm(A) = max(svd(A))
+    """
+    Generate a rotation matrix to rotate `yi` to align with `yf`.
+    """
+    # Ensure inputs are column vectors of shape (3, 1)
+    yi = yi.reshape(3, 1) if yi.ndim == 1 else yi
+    yf = yf.reshape(3, 1) if yf.ndim == 1 else yf
+
+    if np.isscalar(yf):
+        ax = yi / np.linalg.norm(yi)  # Normalize axis
         phi = yf
     else:
         yi = yi / np.linalg.norm(yi)
         yf = yf / np.linalg.norm(yf)
         ax = np.cross(yi.T, yf.T).T
         ax = ax / np.linalg.norm(ax)
-        # find angle of rotation
-        phi = np.degrees(np.arccos(np.dot(yi.T, yf)))
 
-    if (abs(phi) > 0.1):
+        # Find angle of rotation
+        phi = np.arccos(np.dot(yi.T, yf).item())  # Extract scalar from 1x1 matrix
+
+    if abs(phi) > 0.1:
         phi = phi * (np.pi / 180)
 
-        s_hat = np.array([[0, -ax[2], ax[1]],
-                          [ax[2], 0, -ax[0]],
-                          [-ax[1], ax[0], 0]])
-        R = np.eye(3) + np.sin(phi) * s_hat + (1 - np.cos(phi)) * np.dot(s_hat, s_hat)      # dot???
+        s_hat = np.array([
+            [0, -ax[2, 0], ax[1, 0]],
+            [ax[2, 0], 0, -ax[0, 0]],
+            [-ax[1, 0], ax[0, 0], 0]
+        ])
+        R = np.eye(3) + np.sin(phi) * s_hat + (1 - np.cos(phi)) * np.dot(s_hat, s_hat)
     else:
         R = np.eye(3)
+
     return R
 
 '''

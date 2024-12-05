@@ -21,49 +21,39 @@ C: Camera matrix
 D: Depth image, the unit of each element in it is "meter"
 RD: Raw depth image, the unit of each element in it is "meter"
 '''
-def getHHA(C, D, RD):
-    missingMask = (RD == 0);
-    pc, N, yDir, h, pcRot, NRot = processDepthImage(D * 100.0, missingMask, C);
+def getHHA(C, D):
+    depth_meters = D.astype(np.float32) / 1000.0  # Assuming input is in millimeters
+    missingMask = (depth_meters == 0)
 
+    # Process depth image to obtain required features
+    pc, N, yDir, h, pcRot, NRot = processDepthImage(depth_meters * 100, missingMask, C)
+
+    # Calculate angle using dot product
     tmp = np.multiply(N, yDir)
-    acosValue = np.minimum(1,np.maximum(-1,np.sum(tmp, axis=2)))
-    angle = np.array([math.degrees(math.acos(x)) for x in acosValue.flatten()])
-    angle = np.reshape(angle, h.shape)
+    acosValue = np.minimum(1, np.maximum(-1, np.sum(tmp, axis=2)))
+    angle = np.degrees(np.arccos(acosValue))
+    angle[np.isnan(angle)] = 180  # Handle NaN values
 
-    '''
-    Must convert nan to 180 as the MATLAB program actually does. 
-    Or we will get a HHA image whose border region is different
-    with that of MATLAB program's output.
-    '''
-    angle[np.isnan(angle)] = 180        
+    # Prepare HHA components
+    pc[:, :, 2] = np.clip(pc[:, :, 2], 0.1, None)  # Prevent division by zero
+    I = np.zeros_like(pc, dtype=np.float32)
+
+    # Assign components to channels
+    I[:, :, 0] = normalize_channel(angle)  # Red
+    I[:, :, 1] = normalize_channel(h)      # Green
+    I[:, :, 2] = normalize_channel(31000 / pc[:, :, 2])  # Blue
 
 
-    pc[:,:,2] = np.maximum(pc[:,:,2], 100)
-    I = np.zeros(pc.shape)
+    # Ensure valid pixel values and convert to uint16
+    I = np.clip(I, 0, 65535).astype(np.uint16)
 
-    # opencv-python save the picture in BGR order.
-    I[:,:,2] = 31000/pc[:,:,2]
-    I[:,:,1] = h
-    I[:,:,0] = (angle + 128-90)
+    return I
 
-    # print(np.isnan(angle))
-
-    # '''
-    # np.uint8 seems to use 'floor', but in matlab, it seems to use 'round'.
-    # So I convert it to integer myself.
-    # '''
-    # I = np.rint(I)
-
-    # # np.uint8: 256->1, but in MATLAB, uint8: 256->255
-    # I[I>255] = 255
-    # HHA = I.astype(np.uint8)
-    
-    # NOTE: in this case we will use uin16 to represent the image
-    I = np.rint(I)
-    I[I>65535] = 65535
-    HHA = I.astype(np.uint16)
-
-    return HHA
+def normalize_channel(channel, low=2, high=98):
+    p_low, p_high = np.percentile(channel, [low, high])
+    channel = np.clip(channel, p_low, p_high)
+    channel = (channel - p_low) / (p_high - p_low)
+    return channel * 65535  # Scale to uint16 range
 
 if __name__ == "__main__":
     D, RD = getImage()
